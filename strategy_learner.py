@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from numpy import asarray
-from pandas import DataFrame, date_range, ewma, cut
+from pandas import DataFrame, date_range, cut
 import matplotlib.pyplot as plt
 from matplotlib import cm as cm
 from matplotlib import style
@@ -37,13 +37,13 @@ class Trade(object):
 
         # Determine features
         # Daily Returns
-        rets = DataFrame(df)
-        daily_ret = rets[symbol].copy()
-        daily_ret[1:] = (rets[symbol].ix[1:] / rets[symbol].ix[:-1].values) - 1
-        daily_ret.ix[0] = 0
+        returns = DataFrame(df)
+        daily_returns = returns[symbol].copy()
+        daily_returns[1:] = (returns[symbol].ix[1:] / returns[symbol].ix[:-1].values) - 1
+        daily_returns.ix[0] = 0
 
         # Relative Strnength Index
-        up, down = daily_ret.copy(), daily_ret.copy()
+        up, down = daily_returns.copy(), daily_returns.copy()
         up[up < 0] = 0
         down[down > 0] = 0
         roll_up = up.rolling(14).mean()
@@ -71,8 +71,9 @@ class Trade(object):
         bb = (normed - (sma_bb - 2 * sma_bb_std)) / ((sma_bb + 2 * sma_bb_std) - (sma_bb - 2 * sma_bb_std))
 
         # Moving average convergence/divergence
-        ema12 = ewma(asarray(normed), span=12)
-        ema26 = ewma(asarray(normed), span=26)
+        ema12 = normed.ewm(span=12).mean()
+        ema26 = normed.ewm(span=26).mean()
+
         macd = ema12 - ema26
 
         # Momentum
@@ -97,8 +98,8 @@ class Trade(object):
             .assign(sma40=normed / sma40 - 1) \
             .assign(vol5=vol5).assign(momentum5=momentum5) \
             .assign(momentum10=momentum10)[start_date:]
-        daily_ret.ix[0] = 0
-        df = df.assign(dr=daily_ret)
+        daily_returns.ix[0] = 0
+        df = df.assign(dr=daily_returns)
 
         # Determine optimal features for states
         corr_df = df.corr().abs()
@@ -118,62 +119,62 @@ class Trade(object):
         self.action = self.Action()
 
     def buy(self):
-        self.shares = 1
+        self.shares = 100
         close = self.current[1][self.symbol]
         if self.position == 1:
             return -100
         elif self.position == 0:
             self.position = 1
             if self.verbose:
-                print('Buy 1 contract at $%0.2f'.format(close))
+                print("Buy {} contracts at $%0.2f".format(self.shares, close))
             return 10 * self.current[1]['dr']
         elif self.position == 2:
             self.position = 1
             if self.verbose:
-                print('Close position and buy 1 contract at $%0.2f'.format(close))
+                print("Close position and buy {} ontracts at $%0.2f".format(self.shares, close))
             return 10 * self.current[1]['dr']
         else:
             self.position = 1
-            print('Error: position unknown')
+            print("Error: position unknown")
             return -100
 
     def sell(self):
-        self.shares = -1
+        self.shares = -100
         close = self.current[1][self.symbol]
         if self.position == 1:
             self.position = 2
             if self.verbose:
-                print('Close position and short 1 contract at $%0.2f'.format(close))
+                print("Close position and short {} contracts at $%0.2f".format(self.shares, close))
             return -10 * self.current[1]['dr']
         elif self.position == 0:
             self.position = 2
             if self.verbose:
-                print('Short 1 contract at $%0.2f'.format(close))
+                print("Short {} contract at $%0.2f".format(self.shares, close))
             return -10 * self.current[1]['dr']
         elif self.position == 2:
             return -100
         else:
             self.position = 2
-            print('Error: position unknown')
+            print("Error: position unknown")
             return -100
 
     def hold(self):
         if self.position == 1:
             if self.verbose:
-                print('Hold long position')
+                print("Hold long position")
             return 5 * self.current[1]['dr']
         elif self.position == 0:
             if self.verbose:
-                print('Hold cash position')
+                print("Hold cash position")
             return 0
         elif self.position == 2:
-            return -5 * self.current[1]['dr']
+            return -5 * self.current[1]["dr"]
         else:
             self.position = 0
-            print('Error: position unknown')
+            print("Error: position unknown")
             return -100
 
-    def discritize(self):
+    def discretize(self):
         date = self.current[0]
         s = self.position
         for i, feature in enumerate(self.optimal_features):
@@ -188,7 +189,7 @@ class Trade(object):
         # Find state of next day
         try:
             self.current = next(self.market)
-            state = self.discritize()
+            state = self.discretize()
         except StopIteration:
             return None, None
 
@@ -196,7 +197,7 @@ class Trade(object):
 
     def state(self):
         close = self.current[1][self.symbol]
-        value = self.shares * self.current[1]['dr'] + self.cash
+        value = self.shares * self.current[1]["dr"] + self.cash
         return value, self.cash, self.shares, close
 
     def baseline(self):
@@ -214,12 +215,12 @@ class StrategyLearner(object):
 
     # this method should create a QLearner, and train it for trading
     def add_evidence(self, symbol, start_date, end_date, investment):
-        ret = -1  # current return
+        returns = -1  # current return
         i = 0  # loop iterator
         while i < 10:
             i += 1
             trade = Trade(symbol=symbol, start_date=start_date, end_date=end_date, investment=investment, bench_sym=self.bench_sym, verbose=self.verbose)
-            s = trade.discritize()
+            s = trade.discretize()
             a = self.ql.querysetstate(s)
             while True:
                 s1, r = trade.reward(a)
@@ -227,9 +228,9 @@ class StrategyLearner(object):
                     break
                 a = self.ql.query(s1, r)
 
-            ret0 = ret
-            ret = trade.state()[0]
-            if (ret == ret0) & (i > 200):
+            returns0 = returns
+            returns = trade.state()[0]
+            if (returns == returns0) & (i > 200):
                 break
 
             if i > 1000:
@@ -239,7 +240,7 @@ class StrategyLearner(object):
     # this method should use the existing policy and test it against new data
     def test_policy(self, symbol, start_date, end_date, investment):
         trade = Trade(symbol=symbol, start_date=start_date, end_date=end_date, investment=investment, bench_sym=self.bench_sym, verbose=self.verbose)
-        s = trade.discritize()
+        s = trade.discretize()
         a = self.ql.querysetstate(s)
 
         df = trade.rawData()
@@ -275,16 +276,16 @@ class StrategyLearner(object):
             else:
                 return 0
 
-        df = df[df['Trades'] != 2].copy()
-        df['Order'] = df['Trades'].apply(lambda x: order(x))
-        df['Shares'] = 400
-        df['Shares'].ix[0] = 200
-        df = df[['Order', 'Shares']].copy()
+        df = df[df["Trades"] != 2].copy()
+        df["Order"] = df["Trades"].apply(lambda x: order(x))
+        df["Shares"] = 100
+        df["Shares"].ix[0] = 50
+        df = df[["Order", "Shares"]].copy()
 
         # Create benchmark dataframe
         start = df.index[0]
         end = df.index[-1]
-        benchmark = DataFrame({'Order': ['BUY', 'SELL'], 'Shares': [200, 200]}, index=[start, end])
+        benchmark = DataFrame({"Order": ["BUY", "SELL"], "Shares": [200, 200]}, index=[start, end])
         return df, benchmark
 
 

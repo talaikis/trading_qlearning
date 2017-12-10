@@ -5,9 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib import style
 from numpy import asarray
 
-import util as ut
 import strategy_learner as sl
-
 from util import get_data
 
 style.use('ggplot')
@@ -23,7 +21,7 @@ def run_algo(sym, investment, start_date, end_date, bench_sym):
     # get some data for reference
     syms = [sym]
     dates = date_range(start_date, end_date)
-    prices_all = ut.get_data(symbols=syms, dates=dates, bench_sym=bench_sym)
+    prices_all = get_data(symbols=syms, dates=dates, bench_sym=bench_sym)
     prices = prices_all[syms]
 
     # test the learner
@@ -57,10 +55,11 @@ def evaluate(sym, orders, start_val, fee, slippage, bench_sym):
         else:
             order = -1
 
+        # Start with 1/2 position at first
         if i == 0:
-            shares = 200
+            shares = 100
         else:
-            shares = 400
+            shares = 200
 
         # Calculate change in shares and cash
         df_trades[sym][date] += order * shares
@@ -132,7 +131,7 @@ if __name__ == "__main__":
 
     # Plot charts
     plt.subplot(1, 2, 1)
-    plt.plot(insample.index, insample, c="lightcoral")
+    plt.plot(insample.index, insample, c="mediumseagreen", lw=3)
     plt.plot(bench_insample.index, bench_insample, c="skyblue")
     plt.legend(["Strategy", "Buy and Hold"])
     plt.title("In-sample")
@@ -140,7 +139,7 @@ if __name__ == "__main__":
     plt.ylabel("Value")
 
     plt.subplot(1, 2, 2)
-    plt.plot(outsample.index, outsample, c="mediumseagreen")
+    plt.plot(outsample.index, outsample, c="mediumseagreen", lw=3)
     plt.plot(bench_outsample.index, bench_outsample, c="skyblue")
     plt.legend(["Strategy", "Buy and Hold"])
     plt.title("Out-of-sample")
