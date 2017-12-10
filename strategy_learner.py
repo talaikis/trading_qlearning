@@ -1,4 +1,5 @@
 from datetime import timedelta
+from random import seed
 
 from numpy import asarray
 from pandas import DataFrame, date_range, cut
@@ -10,6 +11,7 @@ import qlearner as ql
 from util import get_data
 
 style.use('ggplot')
+seed(0)
 
 
 class Trade(object):
@@ -122,7 +124,7 @@ class Trade(object):
         self.shares = 100
         close = self.current[1][self.symbol]
         if self.position == 1:
-            return -100
+            return -50
         elif self.position == 0:
             self.position = 1
             if self.verbose:
@@ -136,7 +138,7 @@ class Trade(object):
         else:
             self.position = 1
             print("Error: position unknown")
-            return -100
+            return -50
 
     def sell(self):
         self.shares = -100
@@ -152,11 +154,11 @@ class Trade(object):
                 print("Short {} contract at $%0.2f".format(self.shares, close))
             return -10 * self.current[1]['dr']
         elif self.position == 2:
-            return -100
+            return -50
         else:
             self.position = 2
             print("Error: position unknown")
-            return -100
+            return -50
 
     def hold(self):
         if self.position == 1:
@@ -234,7 +236,7 @@ class StrategyLearner(object):
                 break
 
             if i > 1000:
-                print('Error: cannot converge')
+                print("Error: cannot converge")
                 break
 
     # this method should use the existing policy and test it against new data
@@ -278,14 +280,14 @@ class StrategyLearner(object):
 
         df = df[df["Trades"] != 2].copy()
         df["Order"] = df["Trades"].apply(lambda x: order(x))
-        df["Shares"] = 100
-        df["Shares"].ix[0] = 50
+        df["Shares"] = 200
+        df["Shares"].ix[0] = 100
         df = df[["Order", "Shares"]].copy()
 
         # Create benchmark dataframe
         start = df.index[0]
         end = df.index[-1]
-        benchmark = DataFrame({"Order": ["BUY", "SELL"], "Shares": [200, 200]}, index=[start, end])
+        benchmark = DataFrame({"Order": ["BUY", "SELL"], "Shares": [100, 100]}, index=[start, end])
         return df, benchmark
 
 

@@ -9,3 +9,5 @@ Uses [Machine_Learning_for_Trading](https://github.com/jason-r-becker/Machine_Le
 Edit values in main.py and:
 
     $ python main.py
+
+P.S. Neither original, nor this code is reproducible, for educational purposes only.

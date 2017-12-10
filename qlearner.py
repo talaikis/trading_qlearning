@@ -2,6 +2,8 @@ from numpy import ndarray, argmax, max
 from numpy.random import uniform, randint, multinomial
 import random as rand
 
+rand.seed(0)
+
 
 class QLearner(object):
     def __init__(self, num_states=100, num_actions=3, alpha=0.2, gamma=0.9, rar=0.5, radr=0.99, dyna=0, verbose=False):

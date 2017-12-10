@@ -1,4 +1,5 @@
 from datetime import datetime
+from random import seed
 
 from pandas import date_range, DataFrame
 import matplotlib.pyplot as plt
@@ -9,7 +10,7 @@ import strategy_learner as sl
 from util import get_data
 
 style.use('ggplot')
-
+seed(0)
 
 def run_algo(sym, investment, start_date, end_date, bench_sym):
     # instantiate the strategy learner
@@ -94,7 +95,7 @@ if __name__ == "__main__":
     symbol = "NASDAQ1001440"
     bench_sym = "S&P5001440"
     verbose = False
-    investment = 100000
+    investment = 100000 # 100k = 100 contracts
     fee = 0
     slippage = 0.0025  # in %
     start_date_insample = datetime(2013, 5, 1)
